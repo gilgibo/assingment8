@@ -21,6 +21,7 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -40,7 +41,9 @@ public class MainActivity extends AppCompatActivity {
     ProgressDialog dialog;
     Animation ani;
     LinearLayout line;
+    ArrayList<DataInfo> info = new ArrayList<DataInfo>();
     ArrayList<String> data = new ArrayList<String>();
+    ArrayList<String> urldata = new ArrayList<String>();
     ArrayAdapter<String> adapter;
 
     @Override
@@ -56,6 +59,32 @@ public class MainActivity extends AppCompatActivity {
         listView = (ListView)findViewById(R.id.listview);
         adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, data);
         listView.setAdapter(adapter);
+
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                listView.setVisibility(View.INVISIBLE);
+                webView.setVisibility(View.VISIBLE);
+                webView.loadUrl(info.get(position).GetUrl());
+            }
+        });
+
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(final AdapterView<?> parent, View view, final int position, long id) {
+                AlertDialog.Builder dlg = new AlertDialog.Builder(MainActivity.this);
+                dlg.setTitle("즐겨찾기 삭제").setPositiveButton("삭제 하시겠습니까?", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        data.remove(position);
+                        info.remove(position);
+                        urldata.remove(position);
+                        adapter.notifyDataSetChanged();
+                    }
+                }).show();
+                return false;
+            }
+        });
 
 
         webView.addJavascriptInterface(new JavaScriptMethods(), "MyApp");
@@ -130,8 +159,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add(0,1,0,"즐거찾기추가");
-        menu.add(0,2,0,"즐거찾기목록");
+        menu.add(0,1,0,"즐겨찾기추가");
+        menu.add(0,2,0,"즐겨찾기목록");
         return super.onCreateOptionsMenu(menu);
     }
 
@@ -159,28 +188,46 @@ public class MainActivity extends AppCompatActivity {
 
     class JavaScriptMethods {
 
+
         @JavascriptInterface
-        public void displayToast(){
+        public boolean judge(String url){
+            if(urldata.contains(url))
+                return false;
+            else
+                return true;
+        }
+
+        @JavascriptInterface
+        public void addinfo(final String name, final String url ){
             myhandler.post(new Runnable() {
                 @Override
                 public void run() {
+                    if( info.size() == 0 || !urldata.contains(url)) {
+                        info.add(new DataInfo(name, url));
+                        urldata.add(url);
+                        data.add("사이트 명 : " + name  + "     URL : " +  url);
+                        adapter.notifyDataSetChanged();
+                    }
+                }
+            });
+        }
 
-                    AlertDialog.Builder dlg = new AlertDialog.Builder(MainActivity.this);
-                    dlg.setTitle("그림변경").setMessage("").setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            webView.loadUrl("javascript:changeImage()");
-                        }
-                    }).setNegativeButton("Cancel", null).show();
+        @JavascriptInterface
+        public void urlvis(){
+            myhandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    line.setVisibility(View.VISIBLE);
                 }
             });
         }
     }
 
-
     public void onClick(View v){
-        if(v.getId() == R.id.bt2){
-            webView.loadUrl("javascript:changeImage()");
+        if(v.getId() == R.id.bt){
+            webView.setVisibility(View.VISIBLE);
+            listView.setVisibility(View.INVISIBLE);
+            webView.loadUrl(et.getText().toString());
         }
     }
 
